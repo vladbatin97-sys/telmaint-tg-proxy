@@ -1,0 +1,22 @@
+# Прокси Bot API для прода TELMAINT (с 2026-10-16), Render + публичный образ caddy:2-alpine.
+#
+# Из Yandex Cloud РФ Telegram недоступен. Отпало: `*.workers.dev` режут по SNI,
+# Netlify заблокировал свежий аккаунт, Deno требует GitHub. `*.onrender.com` из
+# Яндекса доступен. Сервер ходит сюда по
+# TELEGRAM_API_BASE=https://<сервис>.onrender.com/<TG_SECRET>.
+#
+# Не открытый прокси: путь начинается с секрета, токен в пути — только наших
+# ботов (TG_BOT_IDS — регэксп-альтернатива id через «|»). Оба значения — в env
+# сервиса Render. Файл кладётся в контейнер командой запуска (см. README.md).
+:{$PORT:10000} {
+	handle_path /{$TG_SECRET}/* {
+		@ours path_regexp ours ^/(file/)?bot({$TG_BOT_IDS}):[A-Za-z0-9_-]+/
+		handle @ours {
+			reverse_proxy https://api.telegram.org {
+				header_up Host api.telegram.org
+			}
+		}
+		respond "forbidden" 403
+	}
+	respond "not found" 404
+}
